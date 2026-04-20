@@ -13,10 +13,8 @@ def process_research(query: str):
         cleaned=cleaned,
         response=result
     )
-    print("Processed research query and logged the event.")
 
     return {
-    "original": query,
-    "cleaned": cleaned,
-    "response": result
+    "answer": result.summary,
+    "sources": result.sources
 }

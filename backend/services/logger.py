@@ -1,8 +1,6 @@
 import json
 from datetime import datetime
-from pathlib import Path
-
-LOG_FILE = Path("logs.jsonl")
+from services.db import save_log
 
 def get_readable_time():
     return datetime.now().strftime("%d %B %Y, %H:%M:%S")
@@ -25,6 +23,5 @@ def log_event(original: str, cleaned: str, response):
         "response": clean_response(response)
     }
     
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry) + "\n")
+    save_log(entry)
         

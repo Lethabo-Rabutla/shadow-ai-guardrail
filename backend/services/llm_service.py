@@ -11,7 +11,22 @@ llm = ChatOpenAI(model="gpt-4o-mini")
 parser = PydanticOutputParser(pydantic_object=ResearchResponse)
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "Return structured output: {format_instructions}"),
+    ("system", """
+    You are a helpful AI research assistant.
+
+    Your job:
+    - Answer any user question clearly and directly.
+    - Provide useful, practical information.
+    - Do NOT repeat or restate the user's input.
+    - Do NOT write generic document-style summaries.
+    - Do NOT include filler phrases like "this document outlines".
+    - Focus on clarity, correctness, and usefulness.
+
+    If the question is ambiguous, infer intent and still provide a helpful answer.
+
+    Return ONLY valid structured output:
+    {format_instructions}
+    """),
     ("human", "{query}")
 ]).partial(
     format_instructions=parser.get_format_instructions()
