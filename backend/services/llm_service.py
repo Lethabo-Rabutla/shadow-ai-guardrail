@@ -21,6 +21,13 @@ prompt = ChatPromptTemplate.from_messages([
     - Do NOT write generic document-style summaries.
     - Do NOT include filler phrases like "this document outlines".
     - Focus on clarity, correctness, and usefulness.
+    
+    
+    Return:
+    - topic
+    - summary (MUST NOT be empty)
+    - sources
+    - tools_used
 
     If the question is ambiguous, infer intent and still provide a helpful answer.
 
@@ -36,4 +43,15 @@ chain = prompt | llm | parser
 
 
 def run_research(query: str):
-    return chain.invoke({"query": query})
+    try:
+        return chain.invoke({"query": query})
+    except Exception as e:
+        print("Parser failed:", e)
+
+        # fallback response
+        return ResearchResponse(
+            topic="Unknown",
+            summary="Could not parse response",
+            sources=[],
+            tools_used=[]
+        )
