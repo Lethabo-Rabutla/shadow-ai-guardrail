@@ -1,42 +1,33 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 import Chat from "./pages/Chat";
 import Admin from "./pages/Admin";
+import Login from "./pages/Login";
 
 function App() {
-  const user = {
-    role: "admin", // change to "user" to test restriction
-  };
+  const [user, setUser] = useState(null);
 
-  return (
-    <Router>
-      <div className="bg-gray-950 text-white min-h-screen">
-        {/* NAVBAR */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-800">
-          <h1 className="text-lg font-semibold">🛡️ Shadow AI Guardrail</h1>
+  useEffect(() => {
+    // Check existing session
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user || null);
+    });
 
-          <div className="space-x-4 text-sm">
-            <Link to="/" className="hover:text-blue-400">
-              Chat
-            </Link>
-            <Link to="/admin" className="hover:text-blue-400">
-              Admin
-            </Link>
-          </div>
-        </div>
+    // Listen for auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+      },
+    );
 
-        {/* ROUTES */}
-        <Routes>
-          <Route path="/" element={<Chat />} />
-          <Route
-            path="/admin"
-            element={
-              user.role === "admin" ? <Admin /> : <div>Access Denied</div>
-            }
-          />
-        </Routes>
-      </div>
-    </Router>
-  );
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
+  return <Chat />; // later we’ll route admin
 }
 
 export default App;
