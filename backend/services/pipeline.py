@@ -4,17 +4,37 @@ from services.logger import log_event
 
 def process_research(query: str):
 
-    cleaned = scrub(query)
+    # --- SCRUB ---
+    try:
+        cleaned = scrub(query)
+    except Exception as e:
+        print(" Scrubber failed:", e)
+        cleaned = query  # fallback to original (don’t break flow)
 
-    result = run_research(cleaned)
-    
-    log_event(
-        original=query,
-        cleaned=cleaned,
-        response=result
-    )
+    # --- LLM ---
+    try:
+        result = run_research(cleaned)
+    except Exception as e:
+        print("LLM failed:", e)
 
+        # 🔥 RETURN SAME STRUCTURE (IMPORTANT)
+        return {
+            "answer": "AI service is temporarily unavailable. Please try again.",
+            "sources": []
+        }
+
+    # --- LOGGING ---
+    try:
+        log_event(
+            original=query,
+            cleaned=cleaned,
+            response=result
+        )
+    except Exception as e:
+        print("Logging failed:", e)
+
+    # --- FINAL RESPONSE (UNCHANGED) ---
     return {
-    "answer": result.summary,
-    "sources": result.sources
+    "answer": getattr(result, "summary", "No response available"),
+    "sources": getattr(result, "sources", [])
 }
