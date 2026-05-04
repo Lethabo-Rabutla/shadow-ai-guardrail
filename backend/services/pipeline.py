@@ -2,7 +2,7 @@ from services.pii_scrubber import scrub
 from services.llm_service import run_research
 from services.logger import log_event
 
-def process_research(query: str, user_id: str):
+def process_research(query: str, user_id: str, organization_id: str = None):
 
     # --- SCRUB ---
     try:
@@ -27,6 +27,7 @@ def process_research(query: str, user_id: str):
     try:
         log_event(
             user_id=user_id,
+            organization_id=organization_id,
             original=query,
             cleaned=cleaned,
             response=result

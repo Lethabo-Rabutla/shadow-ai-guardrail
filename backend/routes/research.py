@@ -8,15 +8,10 @@ router = APIRouter()
 @router.post("/research")
 def research(request: ResearchRequest):
     try:
-        return process_research(request.query, request.user_id)
-
+        return process_research(request.query, request.user_id, request.organization_id)  # 👈
     except Exception as e:
         print("❌ Research route error:", e)
-
         return JSONResponse(
             status_code=500,
-            content={
-                "answer": "❌ Something went wrong. Please try again.",
-                "sources": []
-            },
+            content={"answer": "❌ Something went wrong. Please try again.", "sources": []},
         )

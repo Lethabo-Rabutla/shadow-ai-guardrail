@@ -1,24 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { supabase } from "../lib/supabase";
 
-function Chat() {
+function Chat({ user, organizationId, onLogout }) {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
 
   const chatEndRef = useRef(null);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
-
-    getUser();
-  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,6 +33,7 @@ function Chat() {
       const res = await axios.post("http://127.0.0.1:8000/research", {
         query: message,
         user_id: user ? user.id : null,
+        organization_id: organizationId,
       });
 
       const fullText = res.data.answer;
@@ -87,7 +77,7 @@ function Chat() {
       {/* HEADER */}
       <div className="text-center py-4 border-b border-gray-800">
         <button
-          onClick={() => supabase.auth.signOut()}
+          onClick={onLogout}
           className="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded"
         >
           Logout

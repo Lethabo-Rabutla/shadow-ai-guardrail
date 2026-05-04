@@ -1,8 +1,10 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class ResearchRequest(BaseModel):
     query: str
-    user_id: str
+    user_id: Optional[str]
+    organization_id: Optional[str] = None 
 
 
 class ResearchResponse(BaseModel):
