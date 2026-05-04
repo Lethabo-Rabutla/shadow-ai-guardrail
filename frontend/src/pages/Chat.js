@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { supabase } from "../lib/supabase";
 
 function Chat() {
   const [message, setMessage] = useState("");
@@ -8,6 +9,16 @@ function Chat() {
   const [showInfo, setShowInfo] = useState(false);
 
   const chatEndRef = useRef(null);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+
+    getUser();
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +43,7 @@ function Chat() {
     try {
       const res = await axios.post("http://127.0.0.1:8000/research", {
         query: message,
+        user_id: user ? user.id : null,
       });
 
       const fullText = res.data.answer;
@@ -74,6 +86,13 @@ function Chat() {
       {" "}
       {/* HEADER */}
       <div className="text-center py-4 border-b border-gray-800">
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded"
+        >
+          Logout
+        </button>
+
         <h1 className="text-3xl font-semibold tracking-wide text-gray-200">
           🛡️ Shadow AI Guardrail
         </h1>
