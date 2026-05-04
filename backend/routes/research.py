@@ -8,7 +8,7 @@ router = APIRouter()
 @router.post("/research")
 def research(request: ResearchRequest):
     try:
-        return process_research(request.query)
+        return process_research(request.query, request.user_id)
 
     except Exception as e:
         print("❌ Research route error:", e)

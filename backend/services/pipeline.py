@@ -2,14 +2,14 @@ from services.pii_scrubber import scrub
 from services.llm_service import run_research
 from services.logger import log_event
 
-def process_research(query: str):
+def process_research(query: str, user_id: str):
 
     # --- SCRUB ---
     try:
         cleaned = scrub(query)
     except Exception as e:
         print(" Scrubber failed:", e)
-        cleaned = query  # fallback to original (don’t break flow)
+        cleaned = query  
 
     # --- LLM ---
     try:
@@ -26,6 +26,7 @@ def process_research(query: str):
     # --- LOGGING ---
     try:
         log_event(
+            user_id=user_id,
             original=query,
             cleaned=cleaned,
             response=result
