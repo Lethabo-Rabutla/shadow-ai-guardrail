@@ -7,52 +7,54 @@ import Login from "./pages/Login";
 function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [organizationId, setOrganizationId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const handleLogin = (user, role, organizationId) => {
+    setUser(user);
+    setRole(role);
+    setOrganizationId(organizationId);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setRole(null);
+    setOrganizationId(null);
+  };
 
   useEffect(() => {
-    // Check existing session
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user || null);
-    });
-
-    // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-      },
-    );
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const getUserAndRole = async () => {
+    const restoreSession = async () => {
       const { data: userData } = await supabase.auth.getUser();
-
       const currentUser = userData?.user;
 
-      if (!currentUser) return;
-
-      setUser(currentUser);
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, organization_id")
         .eq("id", currentUser.id)
         .maybeSingle();
 
+      setUser(currentUser);
       setRole(profile?.role || "user");
+      setOrganizationId(profile?.organization_id || null);
+      setLoading(false);
     };
 
-    getUserAndRole();
+    restoreSession();
   }, []);
-  console.log("Current user id:", user?.id);
-  console.log("Current user role:", role?.role);
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
-
-  return <Chat />; // later we’ll route admin
+  if (loading) return <div className="h-screen bg-black" />;
+  if (!user) return <Login onLogin={handleLogin} />;
+  if (role === "admin")
+    return <Admin organizationId={organizationId} onLogout={handleLogout} />;
+  return (
+    <Chat user={user} organizationId={organizationId} onLogout={handleLogout} />
+  );
 }
 
 export default App;

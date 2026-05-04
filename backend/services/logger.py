@@ -15,9 +15,10 @@ def clean_response(response):
         return response.dict()
     return str(response)
 
-def log_event(original: str, cleaned: str, response, user_id: str):
+def log_event(original: str, cleaned: str, response, user_id: str, organization_id: str = None):
     entry = {
         "user_id": user_id,
+        "organization_id": organization_id, 
         "timestamp": get_readable_time(),
         "original_prompt": original,
         "cleaned_prompt": cleaned,

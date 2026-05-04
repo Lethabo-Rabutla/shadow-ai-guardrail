@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from routes.research import router
 from routes.logs import router as logs_router
+from routes.admin import router as admin_router
 
 app = FastAPI()
 
@@ -18,6 +19,7 @@ app.add_middleware(
 # ROUTES
 app.include_router(router)
 app.include_router(logs_router)
+app.include_router(admin_router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
