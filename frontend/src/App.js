@@ -51,7 +51,13 @@ function App() {
   if (loading) return <div className="h-screen bg-black" />;
   if (!user) return <Login onLogin={handleLogin} />;
   if (role === "admin")
-    return <Admin organizationId={organizationId} onLogout={handleLogout} />;
+    return (
+      <Admin
+        organizationId={organizationId}
+        onLogout={handleLogout}
+        userEmail={user.email}
+      />
+    );
   return (
     <Chat user={user} organizationId={organizationId} onLogout={handleLogout} />
   );
