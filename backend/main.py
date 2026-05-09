@@ -12,7 +12,7 @@ load_dotenv()
 app = FastAPI()
 
 origins = [
-    os.getenv("FRONTEND_URL", "http://localhost:3001"),
+    os.getenv("FRONTEND_URL", "http://localhost:3000"),
 ]
 
 print("✅ Allowed origins:", origins)

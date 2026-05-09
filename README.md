@@ -295,7 +295,7 @@ The original prompt contained a name. The LLM never saw it.
 ## Author
 
 Built by **Lethabo Rabutla**  
-[GitHub](https://github.com/yourgithub) · [LinkedIn](https://linkedin.com/in/yourlinkedin)
+[GitHub](https://github.com/yourgithub) · [LinkedIn](https://linkedin.com/in/yourlinkedin) · [PortFolio](https://lethaborabutla.com/)
 
 ---
 
