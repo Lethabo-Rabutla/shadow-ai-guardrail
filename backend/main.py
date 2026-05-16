@@ -13,6 +13,9 @@ app = FastAPI()
 
 origins = [
     os.getenv("FRONTEND_URL", "http://localhost:3000"),
+    "https://shadow-ai-guardrail.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
 ]
 
 print("✅ Allowed origins:", origins)
