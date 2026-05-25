@@ -42,3 +42,11 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": str(exc)
         },
     )
+#health check endpoint
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "service": "shadow-ai-guardrail",
+        "version": "1.0"
+    }
