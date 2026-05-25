@@ -27,6 +27,10 @@ const styles = `
     0%, 100% { border-color: rgba(59,130,246,0.3); }
     50% { border-color: rgba(59,130,246,0.7); }
   }
+  @keyframes bannerSlide {
+    from { opacity: 0; transform: translateY(-10px); max-height: 0; }
+    to { opacity: 1; transform: translateY(0); max-height: 120px; }
+  }
 
   .msg-enter { animation: fadeSlideUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
   .header-enter { animation: fadeSlideDown 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
@@ -115,11 +119,33 @@ const styles = `
     transform: translateY(-1px);
   }
 
+  /* Cold start banner */
+  .cold-banner {
+    animation: bannerSlide 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
+    overflow: hidden;
+  }
+  .cold-banner-dismiss {
+    transition: color 0.15s ease;
+  }
+  .cold-banner-dismiss:hover {
+    color: #93c5fd;
+  }
+
+  /* Keep-alive pulse */
+  @keyframes ping-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .ping-alive { animation: ping-pulse 2.5s ease-in-out infinite; }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 `;
+
+// ─── Keep-alive interval (10 minutes) ───────────────────────────────────────
+const PING_INTERVAL_MS = 10 * 60 * 1000;
 
 function Chat({ user, organizationId, onLogout }) {
   const [message, setMessage] = useState("");
@@ -127,8 +153,41 @@ function Chat({ user, organizationId, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+
+  // Cold-start banner: show after a short delay, hide once user gets a response
+  const [showBanner, setShowBanner] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
+  const pingRef = useRef(null);
+
+  // Show banner after 800 ms (avoids flash on fast connections)
+  // bannerDismissed is intentionally excluded — we only want this to run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const t = setTimeout(() => setShowBanner(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  // ── Keep-alive ping ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const ping = async () => {
+      try {
+        await axios.get(`${process.env.REACT_APP_API_URL}/health`, {
+          timeout: 8000,
+        });
+      } catch {
+        // Silently ignore — this is best-effort
+      }
+    };
+
+    // Ping immediately on mount, then every PING_INTERVAL_MS
+    ping();
+    pingRef.current = setInterval(ping, PING_INTERVAL_MS);
+
+    return () => clearInterval(pingRef.current);
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -154,6 +213,10 @@ function Chat({ user, organizationId, onLogout }) {
     const userMsg = { sender: "user", text: message };
     setChat((prev) => [...prev, userMsg]);
     setLoading(true);
+    setMessage("");
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
 
     try {
       const res = await axios.post(
@@ -164,11 +227,14 @@ function Chat({ user, organizationId, onLogout }) {
           organization_id: organizationId,
         },
       );
-      console.log("API URL:", process.env.REACT_APP_API_URL);
 
       const fullText = res.data.answer;
       const sources = res.data.sources;
       let streamed = "";
+
+      // Hide the cold-start banner once the server responds successfully
+      setShowBanner(false);
+      setBannerDismissed(true);
 
       const aiMsg = { sender: "ai", text: "", sources };
       setChat((prev) => [...prev, aiMsg]);
@@ -193,6 +259,17 @@ function Chat({ user, organizationId, onLogout }) {
             text: "⚠️ Daily limit reached. You've used all 10 requests for today. Come back tomorrow!",
           },
         ]);
+      } else if (
+        error.code === "ECONNABORTED" ||
+        error.message?.includes("timeout")
+      ) {
+        setChat((prev) => [
+          ...prev,
+          {
+            sender: "ai",
+            text: "⏳ The server is waking up from sleep — this can take 20–30 seconds on free hosting. Please try your message again in a moment!",
+          },
+        ]);
       } else {
         setChat((prev) => [
           ...prev,
@@ -202,7 +279,6 @@ function Chat({ user, organizationId, onLogout }) {
     }
 
     setLoading(false);
-    setMessage("");
   };
 
   const hints = [
@@ -249,12 +325,17 @@ function Chat({ user, organizationId, onLogout }) {
         {/* HEADER */}
         <div className="header-enter relative z-10 border-b border-white/5 bg-gray-950/80 backdrop-blur-xl">
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-            {/* Left — Logo */}
+            {/* Left — Logo + keep-alive indicator */}
             <div className="flex items-center gap-3">
               <div className="shield-glow text-xl select-none">🛡️</div>
               <div>
-                <div className="text-sm font-semibold tracking-wide text-white">
+                <div className="text-sm font-semibold tracking-wide text-white flex items-center gap-2">
                   Shadow AI
+                  {/* Subtle green dot showing keep-alive is active */}
+                  <span
+                    className="ping-alive inline-block w-1.5 h-1.5 rounded-full bg-green-500"
+                    title="Keep-alive active"
+                  />
                 </div>
                 <div className="mono text-xs text-gray-600">
                   Guardrail System
@@ -278,6 +359,37 @@ function Chat({ user, organizationId, onLogout }) {
               </button>
             </div>
           </div>
+
+          {/* ── Cold-start banner ── */}
+          {showBanner && !bannerDismissed && (
+            <div className="cold-banner border-t border-blue-500/10 bg-blue-950/30 px-6 py-2.5">
+              <div className="max-w-4xl mx-auto flex items-start gap-3">
+                <span className="text-blue-400 text-sm mt-0.5 flex-shrink-0">
+                  ⚡
+                </span>
+                <p className="mono text-xs text-blue-300/80 leading-relaxed flex-1">
+                  <span className="text-blue-300 font-medium">
+                    Free-tier hosting notice —
+                  </span>{" "}
+                  This app runs on Render &amp; Vercel's free plans. If the
+                  server has been idle, the first response may take{" "}
+                  <span className="text-blue-200">20–30 seconds</span> to wake
+                  up. Subsequent messages will be fast. Thanks for your
+                  patience!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowBanner(false);
+                    setBannerDismissed(true);
+                  }}
+                  className="cold-banner-dismiss mono text-xs text-gray-600 flex-shrink-0 mt-0.5 px-1"
+                  aria-label="Dismiss notice"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* CHAT AREA */}
@@ -385,22 +497,37 @@ function Chat({ user, organizationId, onLogout }) {
         <div className="relative z-10 border-t border-white/5 bg-gray-950/80 backdrop-blur-xl p-4">
           <div className="max-w-3xl mx-auto">
             <div
-              className={`flex items-center gap-3 bg-gray-900 border rounded-2xl px-4 py-3 transition-all duration-200 ${
+              className={`flex items-end gap-3 bg-gray-900 border rounded-2xl px-4 py-3 transition-all duration-200 ${
                 inputFocused
                   ? "border-blue-500/40 shadow-lg shadow-blue-500/5"
                   : "border-white/8"
               }`}
             >
-              <input
+              <textarea
                 ref={inputRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && !e.shiftKey && sendMessage()
-                }
+                rows={1}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
-                placeholder="Ask anything..."
+                placeholder="Ask anything... (Shift+Enter for new line)"
+                style={{
+                  resize: "none",
+                  overflow: "hidden",
+                  minHeight: "24px",
+                  maxHeight: "200px",
+                  lineHeight: "1.6",
+                }}
                 className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
               />
               <button
